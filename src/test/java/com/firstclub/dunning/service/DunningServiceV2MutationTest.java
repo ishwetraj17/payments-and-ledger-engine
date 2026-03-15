@@ -446,8 +446,13 @@ class DunningServiceV2MutationTest {
 
             service.processDueV2Attempts();
 
-            // Verify DUNNING_V2_STOPPED_EARLY event
-            verify(domainEventLog).record(eq("DUNNING_V2_STOPPED_EARLY"), anyMap());
+            // Verify DUNNING_V2_STOPPED_EARLY event with correct failureCode — kills line 281
+            @SuppressWarnings("unchecked")
+            ArgumentCaptor<java.util.Map<String, Object>> stopEvtCap =
+                    ArgumentCaptor.forClass(java.util.Map.class);
+            verify(domainEventLog).record(eq("DUNNING_V2_STOPPED_EARLY"), stopEvtCap.capture());
+            assertThat(stopEvtCap.getValue().get("failureCode")).isEqualTo("stolen_card");
+            assertThat(stopEvtCap.getValue().get("category")).isEqualTo("CARD_STOLEN");
             // Verify audit service called with stoppedEarly=true
             verify(decisionAuditService).record(eq(ATTEMPT_ID), eq(DunningDecision.STOP),
                     contains("Non-retryable"), eq(FailureCategory.CARD_STOLEN), eq(true));
@@ -532,6 +537,17 @@ class DunningServiceV2MutationTest {
             ArgumentCaptor<SubscriptionV2> subCap = ArgumentCaptor.forClass(SubscriptionV2.class);
             verify(subscriptionV2Repository).save(subCap.capture());
             assertThat(subCap.getValue().getStatus()).isEqualTo(SubscriptionStatusV2.SUSPENDED);
+
+            // Verify failAttempt was called properly (not via exception handler) — kills line 288
+            ArgumentCaptor<DunningAttempt> cap = ArgumentCaptor.forClass(DunningAttempt.class);
+            verify(dunningAttemptRepository, atLeast(1)).save(cap.capture());
+            DunningAttempt failedAttempt = cap.getAllValues().stream()
+                    .filter(a -> a.getId().equals(ATTEMPT_ID))
+                    .findFirst().orElseThrow();
+            assertThat(failedAttempt.getLastError()).contains("Payment declined");
+            // Audit should still have been called (happens before the potential NPE point)
+            verify(decisionAuditService).record(eq(ATTEMPT_ID), eq(DunningDecision.RETRY_WITH_BACKUP),
+                    anyString(), eq(FailureCategory.CARD_EXPIRED), eq(false));
         }
 
         @Test
@@ -855,6 +871,56 @@ class DunningServiceV2MutationTest {
             boolean v1Cancelled = cap.getAllValues().stream()
                     .anyMatch(a -> a.getId() != null && a.getId().equals(600L));
             assertThat(v1Cancelled).isFalse();
+        }
+
+        @Test
+        @DisplayName("filter excludes the succeeded attempt itself from cancellation — kills !equals on line 387")
+        void filterExcludesSucceededAttemptItself() {
+            DunningAttempt dueAttempt = buildDueAttempt();
+            // Include the succeeded attempt ID in the returned SCHEDULED list (simulating stale query result)
+            DunningAttempt selfAttempt = DunningAttempt.builder()
+                    .id(ATTEMPT_ID).subscriptionId(SUBSCRIPTION_ID).invoiceId(INVOICE_ID)
+                    .attemptNumber(1).scheduledAt(LocalDateTime.now().plusMinutes(60))
+                    .status(DunningStatus.SCHEDULED).dunningPolicyId(POLICY_ID).build();
+            DunningAttempt otherAttempt = DunningAttempt.builder()
+                    .id(501L).subscriptionId(SUBSCRIPTION_ID).invoiceId(INVOICE_ID)
+                    .attemptNumber(2).scheduledAt(LocalDateTime.now().plusMinutes(120))
+                    .status(DunningStatus.SCHEDULED).dunningPolicyId(POLICY_ID).build();
+
+            stubDueAttempts(dueAttempt);
+            when(dunningPolicyRepository.findById(POLICY_ID)).thenReturn(Optional.of(suspendPolicy));
+            when(subscriptionV2Repository.findById(SUBSCRIPTION_ID))
+                    .thenReturn(Optional.of(pastDueSub));
+            when(invoiceRepository.findById(INVOICE_ID)).thenReturn(Optional.of(openInvoice));
+            when(preferenceRepository.findBySubscriptionId(SUBSCRIPTION_ID))
+                    .thenReturn(Optional.of(prefWithBackup));
+            when(paymentIntentService.createForInvoice(anyLong(), any(), anyString()))
+                    .thenReturn(freshPi);
+            when(paymentGatewayPort.chargeWithCode(300L)).thenReturn(ChargeResult.success());
+            when(dunningAttemptRepository.findBySubscriptionIdAndStatus(SUBSCRIPTION_ID, DunningStatus.SCHEDULED))
+                    .thenReturn(List.of(selfAttempt, otherAttempt));
+
+            service.processDueV2Attempts();
+
+            ArgumentCaptor<DunningAttempt> cap = ArgumentCaptor.forClass(DunningAttempt.class);
+            verify(dunningAttemptRepository, atLeast(1)).save(cap.capture());
+
+            // The succeeded attempt (ATTEMPT_ID) must NOT be re-cancelled — it should have no
+            // "earlier attempt succeeded" error set on any save
+            boolean selfWasCancelled = cap.getAllValues().stream()
+                    .anyMatch(a -> a.getId().equals(ATTEMPT_ID)
+                            && a.getLastError() != null
+                            && a.getLastError().contains("earlier attempt succeeded"));
+            assertThat(selfWasCancelled)
+                    .as("Succeeded attempt should not be cancelled by cancelRemainingV2Attempts")
+                    .isFalse();
+
+            // The other attempt (501L) should be cancelled
+            DunningAttempt cancelledOther = cap.getAllValues().stream()
+                    .filter(a -> a.getId().equals(501L))
+                    .findFirst().orElseThrow(() -> new AssertionError("Other attempt should be cancelled"));
+            assertThat(cancelledOther.getStatus()).isEqualTo(DunningStatus.FAILED);
+            assertThat(cancelledOther.getLastError()).contains("earlier attempt succeeded");
         }
     }
 
