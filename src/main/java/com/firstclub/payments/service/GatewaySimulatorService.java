@@ -6,6 +6,7 @@ import com.firstclub.payments.entity.PaymentIntent;
 import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -23,7 +24,11 @@ import java.util.concurrent.TimeUnit;
  * emulator calls {@link WebhookProcessingService#ingestWebhookEvent} directly,
  * which still exercises full HMAC verification and the entire processing
  * pipeline.
+ *
+ * <p>Disabled by default; enabled only when {@code app.gateway-emulator.enabled=true}
+ * (set in application-dev.properties — never in production).
  */
+@ConditionalOnProperty(name = "app.gateway-emulator.enabled", havingValue = "true", matchIfMissing = false)
 @Service
 @RequiredArgsConstructor
 @Slf4j

@@ -16,6 +16,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -24,7 +25,8 @@ import java.util.Map;
 
 /**
  * Fake payment-gateway endpoints used for local development and integration
- * testing.  Remove or disable behind a feature-flag before going to production.
+ * testing.  Disabled by default; enable via {@code app.gateway-emulator.enabled=true}
+ * (set in application-dev.properties — never in production).
  *
  * <p>Endpoints:
  * <ul>
@@ -32,6 +34,7 @@ import java.util.Map;
  *   <li>{@code POST /gateway/otp/confirm} — simulate completing an OTP / 3-DS challenge
  * </ul>
  */
+@ConditionalOnProperty(name = "app.gateway-emulator.enabled", havingValue = "true", matchIfMissing = false)
 @RestController
 @RequestMapping("/gateway")
 @RequiredArgsConstructor
