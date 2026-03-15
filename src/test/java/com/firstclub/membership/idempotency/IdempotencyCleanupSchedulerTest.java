@@ -2,6 +2,8 @@ package com.firstclub.membership.idempotency;
 
 import com.firstclub.platform.idempotency.scheduler.IdempotencyCleanupScheduler;
 import com.firstclub.platform.idempotency.service.IdempotencyRecordService;
+import com.firstclub.platform.scheduler.PrimaryOnlySchedulerGuard;
+import com.firstclub.platform.scheduler.lock.SchedulerLockService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -26,11 +28,15 @@ import static org.mockito.Mockito.when;
 class IdempotencyCleanupSchedulerTest {
 
     @Mock private IdempotencyRecordService recordService;
+    @Mock private SchedulerLockService schedulerLockService;
+    @Mock private PrimaryOnlySchedulerGuard primaryOnlySchedulerGuard;
     @InjectMocks private IdempotencyCleanupScheduler scheduler;
 
     @Test
     @DisplayName("resetStuckProcessing delegates to recordService and returns count")
     void resetStuck_delegatesToRecordService() {
+        when(primaryOnlySchedulerGuard.canRunScheduler(any())).thenReturn(true);
+        when(schedulerLockService.tryAcquireForBatch(any())).thenReturn(true);
         when(recordService.resetStuckProcessing(any())).thenReturn(5);
 
         int count = scheduler.resetStuckProcessing();
@@ -44,6 +50,8 @@ class IdempotencyCleanupSchedulerTest {
     void resetStuck_usesConfiguredThreshold() {
         // Set threshold to 10 minutes via reflection (simulating @Value injection)
         ReflectionTestUtils.setField(scheduler, "stuckThresholdMinutes", 10);
+        when(primaryOnlySchedulerGuard.canRunScheduler(any())).thenReturn(true);
+        when(schedulerLockService.tryAcquireForBatch(any())).thenReturn(true);
         when(recordService.resetStuckProcessing(any())).thenReturn(0);
 
         scheduler.resetStuckProcessing();
@@ -55,6 +63,8 @@ class IdempotencyCleanupSchedulerTest {
     @Test
     @DisplayName("Returns 0 when no stuck records found")
     void resetStuck_returnsZeroWhenNothing() {
+        when(primaryOnlySchedulerGuard.canRunScheduler(any())).thenReturn(true);
+        when(schedulerLockService.tryAcquireForBatch(any())).thenReturn(true);
         when(recordService.resetStuckProcessing(any())).thenReturn(0);
 
         int count = scheduler.resetStuckProcessing();
