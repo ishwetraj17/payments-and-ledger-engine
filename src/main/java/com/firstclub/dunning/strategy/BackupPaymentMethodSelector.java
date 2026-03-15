@@ -32,7 +32,6 @@ public class BackupPaymentMethodSelector {
      */
     public Optional<Long> findBackup(Long subscriptionId) {
         return preferenceRepository.findBySubscriptionId(subscriptionId)
-                .map(SubscriptionPaymentPreference::getBackupPaymentMethodId)
-                .filter(id -> id != null);
+                .map(SubscriptionPaymentPreference::getBackupPaymentMethodId);
     }
 }
