@@ -383,6 +383,43 @@ class PaymentIntentV2ServiceMutationTest {
                     && pi.getSubscriptionId() != null && pi.getSubscriptionId().equals(77L)
                     && "{\"ref\":\"abc\"}".equals(pi.getMetadataJson())));
         }
+
+        @Test
+        @DisplayName("merchant not found → throws MerchantException")
+        void merchantNotFound_throws() {
+            // Kills: line 85 NullReturnValsMutator on lambda$createPaymentIntent$0
+            when(merchantAccountRepository.findById(MERCHANT_ID)).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() ->
+                    service.createPaymentIntent(MERCHANT_ID, "key-m", buildCreateRequest(null)))
+                    .isInstanceOf(com.firstclub.merchant.exception.MerchantException.class);
+        }
+
+        @Test
+        @DisplayName("customer not found → throws CustomerException")
+        void customerNotFound_throws() {
+            // Kills: line 88 NullReturnValsMutator on lambda$createPaymentIntent$1
+            when(merchantAccountRepository.findById(MERCHANT_ID)).thenReturn(Optional.of(merchant));
+            when(customerRepository.findByMerchantIdAndId(MERCHANT_ID, CUSTOMER_ID))
+                    .thenReturn(Optional.empty());
+
+            assertThatThrownBy(() ->
+                    service.createPaymentIntent(MERCHANT_ID, "key-c", buildCreateRequest(null)))
+                    .isInstanceOf(com.firstclub.customer.exception.CustomerException.class);
+        }
+
+        @Test
+        @DisplayName("payment method not found on create → throws PaymentMethodException")
+        void pmNotFoundOnCreate_throws() {
+            // Kills: line 96 NullReturnValsMutator on lambda$createPaymentIntent$2
+            stubMerchantAndCustomer();
+            when(paymentMethodRepository.findByMerchantIdAndCustomerIdAndId(
+                    MERCHANT_ID, CUSTOMER_ID, PM_ID)).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() ->
+                    service.createPaymentIntent(MERCHANT_ID, "key-pm", buildCreateRequest(PM_ID)))
+                    .isInstanceOf(com.firstclub.payments.exception.PaymentMethodException.class);
+        }
     }
 
     // ═══════════════════════════════════════════════════════════════════════════
@@ -615,6 +652,20 @@ class PaymentIntentV2ServiceMutationTest {
     class ConfirmPmResolutionTests {
 
         @Test
+        @DisplayName("PM not found during confirm → throws PaymentMethodException")
+        void pmNotFoundDuringConfirm_throws() {
+            // Kills: line 351 NullReturnValsMutator on lambda$resolvePaymentMethod$5
+            PaymentIntentV2 intent = buildIntent(PaymentIntentStatusV2.REQUIRES_CONFIRMATION, paymentMethod);
+            stubIntentLoad(intent);
+            when(paymentMethodRepository.findByMerchantIdAndCustomerIdAndId(
+                    MERCHANT_ID, CUSTOMER_ID, PM_ID)).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() ->
+                    service.confirmPaymentIntent(MERCHANT_ID, INTENT_ID, confirmRequest()))
+                    .isInstanceOf(com.firstclub.payments.exception.PaymentMethodException.class);
+        }
+
+        @Test
         @DisplayName("PM from intent used when request has no paymentMethodId")
         void pmFromIntent_whenRequestHasNoPm() {
             // Kills: line 340 RemoveConditional_ELSE→false (resolvePaymentMethod fallback from intent)
@@ -654,6 +705,27 @@ class PaymentIntentV2ServiceMutationTest {
             // PM should have been switched
             assertThat(intent.getPaymentMethod()).isEqualTo(paymentMethod2);
         }
+
+        @Test
+        @DisplayName("same PM on request and intent → pmChanged is false, PM not re-set")
+        void samePm_noSwitch() {
+            // Kills: lines 177-178 RemoveConditional_IF→true (pmChanged always true)
+            PaymentIntentV2 intent = buildIntent(PaymentIntentStatusV2.REQUIRES_CONFIRMATION, paymentMethod);
+            stubIntentLoad(intent);
+            when(paymentMethodRepository.findByMerchantIdAndCustomerIdAndId(
+                    MERCHANT_ID, CUSTOMER_ID, PM_ID)).thenReturn(Optional.of(paymentMethod));
+
+            stubConfirmSuccessPath(intent);
+            stubSavePassThrough();
+            when(paymentIntentV2Mapper.toResponseDTO(any())).thenReturn(dummyResponse);
+
+            // Request has the SAME PM_ID as the intent already has
+            service.confirmPaymentIntent(MERCHANT_ID, INTENT_ID, confirmRequestWithPm(PM_ID));
+
+            // PM should still be the same (not switched), the intent.setPaymentMethod
+            // should not have been called since pmChanged=false
+            assertThat(intent.getPaymentMethod()).isSameAs(paymentMethod);
+        }
     }
 
     // ═══════════════════════════════════════════════════════════════════════════
@@ -683,6 +755,62 @@ class PaymentIntentV2ServiceMutationTest {
             assertThatThrownBy(() ->
                     service.confirmPaymentIntent(MERCHANT_ID, INTENT_ID, noGatewayRequest))
                     .isInstanceOf(RoutingException.class);
+        }
+
+        @Test
+        @DisplayName("routing exception with blank gatewayName on request → rethrows RoutingException")
+        void routingException_blankGatewayName_rethrows() {
+            // Kills: line 217 RemoveConditional_IF→true on !isBlank() check
+            PaymentIntentV2 intent = buildIntent(PaymentIntentStatusV2.REQUIRES_CONFIRMATION, paymentMethod);
+            stubIntentLoad(intent);
+            when(paymentMethodRepository.findByMerchantIdAndCustomerIdAndId(
+                    MERCHANT_ID, CUSTOMER_ID, PM_ID)).thenReturn(Optional.of(paymentMethod));
+            when(riskDecisionService.evaluateForPaymentIntent(any())).thenReturn(allowDecision());
+            when(paymentAttemptService.computeNextAttemptNumber(INTENT_ID)).thenReturn(1);
+            when(paymentRoutingService.selectGatewayForAttempt(any(), any(), anyInt()))
+                    .thenThrow(RoutingException.noEligibleGateway("CARD", "INR"));
+
+            // Blank (non-null) gatewayName
+            PaymentIntentConfirmRequestDTO blankGwRequest = PaymentIntentConfirmRequestDTO.builder()
+                    .gatewayName("   ").build();
+
+            assertThatThrownBy(() ->
+                    service.confirmPaymentIntent(MERCHANT_ID, INTENT_ID, blankGwRequest))
+                    .isInstanceOf(RoutingException.class);
+        }
+
+        @Test
+        @DisplayName("routing success with null snapshotJson → no snapshot persisted")
+        void routingSuccess_nullSnapshot_notPersisted() {
+            // Kills: line 230 RemoveConditional_IF→true on snapshotJson null check
+            PaymentIntentV2 intent = buildIntent(PaymentIntentStatusV2.REQUIRES_CONFIRMATION, paymentMethod);
+            stubIntentLoad(intent);
+            when(paymentMethodRepository.findByMerchantIdAndCustomerIdAndId(
+                    MERCHANT_ID, CUSTOMER_ID, PM_ID)).thenReturn(Optional.of(paymentMethod));
+            when(riskDecisionService.evaluateForPaymentIntent(any())).thenReturn(allowDecision());
+
+            // Routing succeeds but snapshotJson is null
+            RoutingDecisionDTO routingDecision = new RoutingDecisionDTO(
+                    "razorpay", 1L, false, "rule match", null);
+            when(paymentRoutingService.selectGatewayForAttempt(any(), any(), anyInt()))
+                    .thenReturn(routingDecision);
+
+            PaymentAttempt attempt = buildAttempt(intent);
+            when(paymentAttemptService.computeNextAttemptNumber(INTENT_ID)).thenReturn(1);
+            when(paymentAttemptService.createAttempt(eq(intent), eq(1), eq("razorpay")))
+                    .thenReturn(attempt);
+            when(gatewayCallService.submitPayment(any(), any()))
+                    .thenReturn(GatewayResult.succeeded("TXN-NS", "SUCCESS", 50L));
+            when(paymentAttemptService.markCaptured(eq(1L), eq(INTENT_ID), anyString(), anyLong()))
+                    .thenReturn(attempt);
+            when(paymentAttemptRepository.save(any())).thenReturn(attempt);
+            stubSavePassThrough();
+            when(paymentIntentV2Mapper.toResponseDTO(any())).thenReturn(dummyResponse);
+
+            service.confirmPaymentIntent(MERCHANT_ID, INTENT_ID, confirmRequest());
+
+            // No snapshot should be set on the attempt
+            assertThat(attempt.getRoutingSnapshotJson()).isNull();
         }
 
         @Test
@@ -925,6 +1053,32 @@ class PaymentIntentV2ServiceMutationTest {
             // gatewayTransactionId should NOT be set when null
             assertThat(attempt.getGatewayTransactionId()).isNull();
             assertThat(attempt.getGatewayReference()).isNull();
+        }
+
+        @Test
+        @DisplayName("succeeded with all gateway fields non-null → all fields set on attempt")
+        void succeeded_allFieldsNonNull() {
+            // Kills: lines 249, 252 RemoveConditional_IF→true (rawResponseJson, gatewayReference null checks)
+            PaymentIntentV2 intent = buildIntent(PaymentIntentStatusV2.REQUIRES_CONFIRMATION, paymentMethod);
+            stubIntentLoad(intent);
+            PaymentAttempt attempt = stubConfirmUntilGateway(intent);
+
+            // Gateway result with all fields filled
+            GatewayResult result = new GatewayResult(
+                    com.firstclub.payments.gateway.GatewayResultStatus.SUCCEEDED,
+                    "TXN-FULL", "REF-FULL", "SUCCESS", null,
+                    "{\"response\":\"ok\"}", 42L, null);
+            when(gatewayCallService.submitPayment(any(), any())).thenReturn(result);
+            when(paymentAttemptService.markCaptured(eq(1L), eq(INTENT_ID), eq("SUCCESS"), eq(42L)))
+                    .thenReturn(attempt);
+            stubSavePassThrough();
+            when(paymentIntentV2Mapper.toResponseDTO(any())).thenReturn(dummyResponse);
+
+            service.confirmPaymentIntent(MERCHANT_ID, INTENT_ID, confirmRequest());
+
+            assertThat(attempt.getGatewayTransactionId()).isEqualTo("TXN-FULL");
+            assertThat(attempt.getGatewayReference()).isEqualTo("REF-FULL");
+            assertThat(attempt.getResponsePayloadJson()).isEqualTo("{\"response\":\"ok\"}");
         }
     }
 
