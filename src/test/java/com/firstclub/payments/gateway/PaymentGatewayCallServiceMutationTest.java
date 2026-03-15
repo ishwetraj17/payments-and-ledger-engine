@@ -305,7 +305,7 @@ class PaymentGatewayCallServiceMutationTest {
             }
             // In the original code, ~99% of 50 calls succeed → expect at least 40 successes.
             // Mutants that always timeout would produce 0 successes.
-            assertThat(successCount).isGreaterThan(0);
+            assertThat(successCount).isGreaterThanOrEqualTo(40);
         }
     }
 
@@ -351,7 +351,7 @@ class PaymentGatewayCallServiceMutationTest {
                 String nodeId = attempt.getProcessorNodeId();
                 // Format: "unknown-" + 8 hex chars
                 String suffix = nodeId.substring("unknown-".length());
-                assertThat(suffix).hasSize(8);
+                assertThat(suffix).hasSize(8).matches("[a-f0-9]{8}");
             }
         }
     }
