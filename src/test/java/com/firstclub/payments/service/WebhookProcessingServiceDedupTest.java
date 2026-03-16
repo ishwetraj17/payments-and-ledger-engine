@@ -149,4 +149,41 @@ class WebhookProcessingServiceDedupTest {
         assertThat(result).isEqualTo(WebhookIngestResult.DUPLICATE);
         verifyNoInteractions(webhookEventRepository);
     }
+
+    // ── processStoredEvent — invalid-signature guard ──────────────────────
+
+    @Test
+    @DisplayName("processStoredEvent: does nothing when signatureValid=false (defense-in-depth)")
+    void processStoredEvent_invalidSignature_skipped() {
+        WebhookEvent invalidSigEvent = WebhookEvent.builder()
+                .eventId("evt_bad_sig")
+                .payload(PAYLOAD)
+                .processed(false)
+                .signatureValid(false)
+                .build();
+
+        service.processStoredEvent(invalidSigEvent);
+
+        // Must not touch the DB, payment service, or any downstream component
+        verifyNoInteractions(paymentIntentService);
+        verifyNoInteractions(paymentRepository);
+        verify(webhookEventRepository, never()).save(any());
+        assertThat(invalidSigEvent.isProcessed()).isFalse();
+    }
+
+    @Test
+    @DisplayName("processStoredEvent: skips already-processed events")
+    void processStoredEvent_alreadyProcessed_skipped() {
+        WebhookEvent processedEvent = WebhookEvent.builder()
+                .eventId("evt_done")
+                .payload(PAYLOAD)
+                .processed(true)
+                .signatureValid(true)
+                .build();
+
+        service.processStoredEvent(processedEvent);
+
+        verifyNoInteractions(paymentIntentService);
+        verifyNoInteractions(paymentRepository);
+    }
 }

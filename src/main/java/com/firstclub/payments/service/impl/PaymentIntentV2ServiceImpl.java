@@ -276,7 +276,7 @@ public class PaymentIntentV2ServiceImpl implements PaymentIntentV2Service {
                     && gatewayResult.failureCategory().isTypicallyRetriable();
             paymentAttemptService.markFailed(
                     attempt.getId(), id,
-                    "DECLINED", gatewayResult.responseMessage(),
+                    gatewayResult.responseCode(), gatewayResult.responseMessage(),
                     gatewayResult.failureCategory(), retriable, latencyMs);
 
             intent.setStatus(PaymentIntentStatusV2.FAILED);

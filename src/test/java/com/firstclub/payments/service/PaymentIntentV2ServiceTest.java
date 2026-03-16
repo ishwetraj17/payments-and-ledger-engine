@@ -315,6 +315,47 @@ class PaymentIntentV2ServiceTest {
                     .isInstanceOf(PaymentIntentException.class)
                     .hasFieldOrPropertyWithValue("errorCode", "INVALID_PAYMENT_INTENT_TRANSITION");
         }
+
+        @Test
+        @DisplayName("gateway failure — actual responseCode from GatewayResult is forwarded to markFailed")
+        void gatewayFailure_propagatesActualResponseCode() {
+            // Regression test: previously "DECLINED" was hardcoded regardless of gateway response code.
+            PaymentIntentV2 intent = buildIntent(
+                    PaymentIntentStatusV2.REQUIRES_CONFIRMATION, paymentMethod);
+            when(paymentIntentV2Repository.findByMerchantIdAndId(MERCHANT_ID, INTENT_ID))
+                    .thenReturn(Optional.of(intent));
+            when(paymentMethodRepository.findByMerchantIdAndCustomerIdAndId(
+                    MERCHANT_ID, CUSTOMER_ID, PM_ID)).thenReturn(Optional.of(paymentMethod));
+            when(riskDecisionService.evaluateForPaymentIntent(any()))
+                    .thenReturn(new RiskDecisionResponseDTO(1L, MERCHANT_ID, INTENT_ID, CUSTOMER_ID,
+                            0, RiskAction.ALLOW, "[]", null));
+            when(paymentRoutingService.selectGatewayForAttempt(any(), any(), anyInt()))
+                    .thenThrow(RoutingException.noEligibleGateway("CARD", "INR"));
+            PaymentAttempt attempt = PaymentAttempt.builder()
+                    .id(1L).paymentIntent(intent).attemptNumber(1)
+                    .gatewayName("razorpay").status(PaymentAttemptStatus.STARTED).build();
+            when(paymentAttemptService.computeNextAttemptNumber(INTENT_ID)).thenReturn(1);
+            when(paymentAttemptService.createAttempt(eq(intent), eq(1), anyString()))
+                    .thenReturn(attempt);
+            when(paymentAttemptRepository.save(any())).thenReturn(attempt);
+
+            // Gateway returns a specific error code (not "DECLINED")
+            GatewayResult declineResult = GatewayResult.failed(
+                    FailureCategory.ISSUER_DECLINE, "Do not honor", "DO_NOT_HONOR", 120L);
+            when(gatewayCallService.submitPayment(any(), any())).thenReturn(declineResult);
+            when(paymentAttemptService.markFailed(anyLong(), anyLong(), anyString(),
+                    anyString(), any(), anyBoolean(), anyLong())).thenReturn(attempt);
+            when(paymentIntentV2Repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+            when(paymentIntentV2Mapper.toResponseDTO(any())).thenReturn(dummyResponse);
+
+            service.confirmPaymentIntent(MERCHANT_ID, INTENT_ID, confirmRequest());
+
+            // Must forward the actual gateway response code, NOT a hardcoded "DECLINED"
+            verify(paymentAttemptService).markFailed(
+                    eq(1L), eq(INTENT_ID),
+                    eq("DO_NOT_HONOR"), eq("Do not honor"),
+                    eq(FailureCategory.ISSUER_DECLINE), anyBoolean(), eq(120L));
+        }
     }
 
     // ── Cancel ────────────────────────────────────────────────────────────────

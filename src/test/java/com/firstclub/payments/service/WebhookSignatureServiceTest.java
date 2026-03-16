@@ -63,4 +63,23 @@ class WebhookSignatureServiceTest {
         assertThat(service.verify(null, "anything")).isFalse();
         assertThat(service.verify(PAYLOAD, null)).isFalse();
     }
+
+    @Test
+    void verify_acceptsUpperCaseSignature() {
+        // verify() must accept upper-case hex from gateways that use uppercase
+        String sig = service.sign(PAYLOAD).toUpperCase();
+        assertThat(service.verify(PAYLOAD, sig)).isTrue();
+    }
+
+    @Test
+    void verify_returnsFalse_forOddLengthSignature() {
+        // Odd-length hex is always invalid — should not throw
+        assertThat(service.verify(PAYLOAD, "abc")).isFalse();
+    }
+
+    @Test
+    void verify_returnsFalse_forNonHexSignature() {
+        // Non-hex characters should be rejected cleanly
+        assertThat(service.verify(PAYLOAD, "z".repeat(64))).isFalse();
+    }
 }
