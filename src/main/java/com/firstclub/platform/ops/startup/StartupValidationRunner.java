@@ -9,16 +9,19 @@ import org.springframework.boot.ApplicationRunner;
 import org.springframework.stereotype.Component;
 
 /**
- * Advisory startup checks that log warnings when the deployment looks
- * misconfigured.  Checks are non-fatal: they log at ERROR/WARN level so
- * alerting pipelines can catch them, but they do not prevent startup
- * (which would break CI environments and local dev).
+ * Startup checks that validate critical configuration before the application
+ * begins serving traffic.
  *
- * <h3>Checks performed</h3>
- * <ol>
- *   <li>Webhook secret is not the default dev placeholder.</li>
+ * <h3>Fail-fast checks (non-dev/non-test profiles)</h3>
+ * <ul>
+ *   <li>Webhook HMAC secret must not be the insecure dev placeholder.</li>
+ *   <li>PII encryption key ({@code PII_ENC_KEY} env var) must be set.</li>
+ * </ul>
+ *
+ * <h3>Advisory checks (all profiles)</h3>
+ * <ul>
  *   <li>Chart of accounts has been seeded (at least one LedgerAccount exists).</li>
- * </ol>
+ * </ul>
  */
 @Slf4j
 @Component
@@ -37,19 +40,36 @@ public class StartupValidationRunner implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) {
-        validateWebhookSecret();
+        boolean isNonDevProfile = !activeProfile.contains("dev") && !activeProfile.contains("test");
+        validateWebhookSecret(isNonDevProfile);
+        validatePiiEncKey(isNonDevProfile);
         validateChartOfAccounts();
     }
 
-    private void validateWebhookSecret() {
+    private void validateWebhookSecret(boolean failFast) {
         boolean isDefault = DEFAULT_WEBHOOK_SECRET.equals(webhookSecret);
         if (isDefault) {
-            boolean isProd = !activeProfile.contains("dev") && !activeProfile.contains("test");
-            if (isProd) {
-                log.error("[STARTUP] SECURITY RISK: payments.webhook.secret is the default dev value. " +
-                          "Replace it before serving real traffic.");
+            if (failFast) {
+                throw new IllegalStateException(
+                        "[STARTUP] SECURITY: payments.webhook.secret is the insecure dev placeholder. " +
+                        "Set the WEBHOOK_SECRET environment variable before deploying.");
             } else {
                 log.warn("[STARTUP] payments.webhook.secret is the default dev value — change before production.");
+            }
+        }
+    }
+
+    private void validatePiiEncKey(boolean failFast) {
+        String piiKey = System.getenv("PII_ENC_KEY");
+        if (piiKey == null || piiKey.isBlank()) {
+            if (failFast) {
+                throw new IllegalStateException(
+                        "[STARTUP] SECURITY: PII_ENC_KEY environment variable is not set. " +
+                        "A 256-bit AES key is required for PII encryption. " +
+                        "Generate with: openssl rand -base64 32");
+            } else {
+                log.warn("[STARTUP] PII_ENC_KEY is not set — using insecure dev fallback key. " +
+                         "Set PII_ENC_KEY before production.");
             }
         }
     }
