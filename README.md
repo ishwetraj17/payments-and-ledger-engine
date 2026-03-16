@@ -394,7 +394,8 @@ docs/
 ├── operations/       Reconciliation playbook, DLQ runbook, risk review flow,
 │                     incident response, manual repair, Redis failure modes,
 │                     scheduler runbook, integrity checks, observability/SLOs,
-│                     financial audit trail
+│                     financial audit trail, staging test plan,
+│                     staging release checklist
 ├── performance/      Bottleneck analysis, Redis usage, hot paths, load test notes
 ├── testing/          Concurrency test strategy, chaos test strategy,
 │                     mutation test strategy
