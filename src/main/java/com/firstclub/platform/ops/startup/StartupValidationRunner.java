@@ -1,6 +1,7 @@
 package com.firstclub.platform.ops.startup;
 
 import com.firstclub.ledger.repository.LedgerAccountRepository;
+import com.firstclub.membership.security.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -16,6 +17,8 @@ import org.springframework.stereotype.Component;
  * <ul>
  *   <li>Webhook HMAC secret must not be the insecure dev placeholder.</li>
  *   <li>PII encryption key ({@code PII_ENC_KEY} env var) must be set.</li>
+ *   <li>JWT secret must not be the insecure dev-only default.</li>
+ *   <li>Gateway emulator must not be enabled (fake payment processor).</li>
  * </ul>
  *
  * <h3>Advisory checks (all profiles)</h3>
@@ -36,12 +39,20 @@ public class StartupValidationRunner implements ApplicationRunner {
     @Value("${payments.webhook.secret:}")
     private String webhookSecret;
 
+    @Value("${app.jwt.secret:}")
+    private String jwtSecret;
+
+    @Value("${app.gateway-emulator.enabled:false}")
+    private boolean gatewayEmulatorEnabled;
+
     private final LedgerAccountRepository ledgerAccountRepository;
 
     @Override
     public void run(ApplicationArguments args) {
         boolean isNonDevProfile = !activeProfile.contains("dev") && !activeProfile.contains("test");
         validateWebhookSecret(isNonDevProfile);
+        validateJwtSecret(isNonDevProfile);
+        validateGatewayEmulator(isNonDevProfile);
         validatePiiEncKey(isNonDevProfile);
         validateChartOfAccounts();
     }
@@ -81,6 +92,33 @@ public class StartupValidationRunner implements ApplicationRunner {
                      "with the default chart of accounts before going live.");
         } else {
             log.info("[STARTUP] Chart of accounts present ({} accounts).", accountCount);
+        }
+    }
+
+    private void validateJwtSecret(boolean failFast) {
+        if (JwtTokenProvider.DEV_FALLBACK_SECRET.equals(jwtSecret)) {
+            if (failFast) {
+                throw new IllegalStateException(
+                        "[STARTUP] SECURITY: app.jwt.secret is the insecure dev-only default. " +
+                        "Set the JWT_SECRET environment variable to a securely generated value " +
+                        "before deploying. Generate with: openssl rand -base64 32");
+            } else {
+                log.warn("[STARTUP] app.jwt.secret is using the dev-only default — " +
+                         "set JWT_SECRET before production.");
+            }
+        }
+    }
+
+    private void validateGatewayEmulator(boolean failFast) {
+        if (gatewayEmulatorEnabled) {
+            if (failFast) {
+                throw new IllegalStateException(
+                        "[STARTUP] SECURITY: app.gateway-emulator.enabled=true in a non-dev/non-test profile. " +
+                        "The fake payment gateway emulator must not be active in staging or production.");
+            } else {
+                log.warn("[STARTUP] Gateway emulator is enabled — " +
+                         "set app.gateway-emulator.enabled=false before production.");
+            }
         }
     }
 }
