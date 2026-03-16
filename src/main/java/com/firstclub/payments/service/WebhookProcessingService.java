@@ -156,6 +156,11 @@ public class WebhookProcessingService {
         if (event.isProcessed()) {
             return;
         }
+        if (!event.isSignatureValid()) {
+            log.warn("Refusing to retry webhook event {} — signature was invalid on ingest",
+                    event.getEventId());
+            return;
+        }
         try {
             WebhookPayloadDTO dto = objectMapper.readValue(event.getPayload(), WebhookPayloadDTO.class);
             processEventInternal(event, dto);

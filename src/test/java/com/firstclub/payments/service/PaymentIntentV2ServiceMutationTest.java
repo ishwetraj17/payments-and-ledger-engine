@@ -968,7 +968,7 @@ class PaymentIntentV2ServiceMutationTest {
                     FailureCategory.NETWORK, "Timeout", "TIMEOUT", 5000L);
             when(gatewayCallService.submitPayment(any(), any())).thenReturn(failResult);
             when(paymentAttemptService.markFailed(eq(1L), eq(INTENT_ID),
-                    eq("DECLINED"), eq("Timeout"),
+                    eq("TIMEOUT"), eq("Timeout"),
                     eq(FailureCategory.NETWORK), eq(true), eq(5000L)))
                     .thenReturn(attempt);
             stubSavePassThrough();
@@ -977,7 +977,7 @@ class PaymentIntentV2ServiceMutationTest {
             service.confirmPaymentIntent(MERCHANT_ID, INTENT_ID, confirmRequest());
 
             verify(paymentAttemptService).markFailed(1L, INTENT_ID,
-                    "DECLINED", "Timeout", FailureCategory.NETWORK, true, 5000L);
+                    "TIMEOUT", "Timeout", FailureCategory.NETWORK, true, 5000L);
         }
 
         @Test
@@ -994,7 +994,7 @@ class PaymentIntentV2ServiceMutationTest {
                     null, null, "ERR", "Unknown error", null, 100L, null);
             when(gatewayCallService.submitPayment(any(), any())).thenReturn(failResult);
             when(paymentAttemptService.markFailed(eq(1L), eq(INTENT_ID),
-                    eq("DECLINED"), eq("Unknown error"),
+                    eq("ERR"), eq("Unknown error"),
                     eq(null), eq(false), eq(100L)))
                     .thenReturn(attempt);
             stubSavePassThrough();
@@ -1003,7 +1003,7 @@ class PaymentIntentV2ServiceMutationTest {
             service.confirmPaymentIntent(MERCHANT_ID, INTENT_ID, confirmRequest());
 
             verify(paymentAttemptService).markFailed(1L, INTENT_ID,
-                    "DECLINED", "Unknown error", null, false, 100L);
+                    "ERR", "Unknown error", null, false, 100L);
         }
 
         @Test
