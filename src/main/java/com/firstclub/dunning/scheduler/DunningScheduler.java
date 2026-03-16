@@ -38,7 +38,7 @@ public class DunningScheduler {
             log.debug("[{}] advisory lock not acquired — another node is running this batch", SCHEDULER_NAME);
             return;
         }
-        log.debug("Dunning scheduler: checking for due attempts");
+        log.info("[{}] Scheduler tick — processing due attempts", SCHEDULER_NAME);
         dunningService.processDueAttempts();
     }
 }

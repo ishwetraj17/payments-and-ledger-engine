@@ -37,7 +37,7 @@ public class DunningSchedulerV2 {
             log.debug("[{}] advisory lock not acquired — another node is running this batch", SCHEDULER_NAME);
             return;
         }
-        log.debug("Dunning v2 scheduler: checking for due policy-driven attempts");
+        log.info("[{}] Scheduler tick — processing due policy-driven attempts", SCHEDULER_NAME);
         dunningServiceV2.processDueV2Attempts();
     }
 }

@@ -27,6 +27,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import com.firstclub.platform.concurrency.ConcurrencyConflictException;
 import com.firstclub.platform.errors.BaseDomainException;
+import com.firstclub.platform.logging.StructuredLogFields;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
@@ -61,7 +62,8 @@ public class GlobalExceptionHandler {
             .errorCode(e.getErrorCode())
             .timestamp(LocalDateTime.now())
             .httpStatus(e.getHttpStatus().value())
-            .requestId(MDC.get("requestId"))
+            .requestId(MDC.get(StructuredLogFields.REQUEST_ID))
+            .correlationId(MDC.get(StructuredLogFields.CORRELATION_ID))
             .build();
 
         return ResponseEntity.status(e.getHttpStatus()).body(error);
@@ -79,7 +81,8 @@ public class GlobalExceptionHandler {
             .errorCode(e.getErrorCode())
             .timestamp(LocalDateTime.now())
             .httpStatus(e.getHttpStatus().value())
-            .requestId(MDC.get("requestId"))
+            .requestId(MDC.get(StructuredLogFields.REQUEST_ID))
+            .correlationId(MDC.get(StructuredLogFields.CORRELATION_ID))
             .build();
 
         return ResponseEntity.status(e.getHttpStatus()).body(error);
@@ -97,7 +100,8 @@ public class GlobalExceptionHandler {
             .errorCode(e.getErrorCode())
             .timestamp(LocalDateTime.now())
             .httpStatus(e.getHttpStatus().value())
-            .requestId(MDC.get("requestId"))
+            .requestId(MDC.get(StructuredLogFields.REQUEST_ID))
+            .correlationId(MDC.get(StructuredLogFields.CORRELATION_ID))
             .build();
 
         return ResponseEntity.status(e.getHttpStatus()).body(error);
@@ -115,7 +119,8 @@ public class GlobalExceptionHandler {
             .errorCode(e.getErrorCode())
             .timestamp(LocalDateTime.now())
             .httpStatus(e.getHttpStatus().value())
-            .requestId(MDC.get("requestId"))
+            .requestId(MDC.get(StructuredLogFields.REQUEST_ID))
+            .correlationId(MDC.get(StructuredLogFields.CORRELATION_ID))
             .build();
 
         return ResponseEntity.status(e.getHttpStatus()).body(error);
@@ -133,7 +138,8 @@ public class GlobalExceptionHandler {
             .errorCode(e.getErrorCode())
             .timestamp(LocalDateTime.now())
             .httpStatus(e.getHttpStatus().value())
-            .requestId(MDC.get("requestId"))
+            .requestId(MDC.get(StructuredLogFields.REQUEST_ID))
+            .correlationId(MDC.get(StructuredLogFields.CORRELATION_ID))
             .build();
 
         return ResponseEntity.status(e.getHttpStatus()).body(error);
@@ -151,7 +157,8 @@ public class GlobalExceptionHandler {
             .errorCode(e.getErrorCode())
             .timestamp(LocalDateTime.now())
             .httpStatus(e.getHttpStatus().value())
-            .requestId(MDC.get("requestId"))
+            .requestId(MDC.get(StructuredLogFields.REQUEST_ID))
+            .correlationId(MDC.get(StructuredLogFields.CORRELATION_ID))
             .build();
 
         return ResponseEntity.status(e.getHttpStatus()).body(error);
@@ -169,7 +176,8 @@ public class GlobalExceptionHandler {
             .errorCode(e.getErrorCode())
             .timestamp(LocalDateTime.now())
             .httpStatus(e.getHttpStatus().value())
-            .requestId(MDC.get("requestId"))
+            .requestId(MDC.get(StructuredLogFields.REQUEST_ID))
+            .correlationId(MDC.get(StructuredLogFields.CORRELATION_ID))
             .build();
 
         return ResponseEntity.status(e.getHttpStatus()).body(error);
@@ -187,7 +195,8 @@ public class GlobalExceptionHandler {
             .errorCode(e.getErrorCode())
             .timestamp(LocalDateTime.now())
             .httpStatus(e.getHttpStatus().value())
-            .requestId(MDC.get("requestId"))
+            .requestId(MDC.get(StructuredLogFields.REQUEST_ID))
+            .correlationId(MDC.get(StructuredLogFields.CORRELATION_ID))
             .build();
 
         return ResponseEntity.status(e.getHttpStatus()).body(error);
@@ -205,7 +214,8 @@ public class GlobalExceptionHandler {
             .errorCode(e.getErrorCode())
             .timestamp(LocalDateTime.now())
             .httpStatus(e.getHttpStatus().value())
-            .requestId(MDC.get("requestId"))
+            .requestId(MDC.get(StructuredLogFields.REQUEST_ID))
+            .correlationId(MDC.get(StructuredLogFields.CORRELATION_ID))
             .build();
             
         return ResponseEntity.status(e.getHttpStatus()).body(error);
@@ -223,7 +233,8 @@ public class GlobalExceptionHandler {
             .errorCode("BAD_CREDENTIALS")
             .timestamp(LocalDateTime.now())
             .httpStatus(HttpStatus.UNAUTHORIZED.value())
-            .requestId(MDC.get("requestId"))
+            .requestId(MDC.get(StructuredLogFields.REQUEST_ID))
+            .correlationId(MDC.get(StructuredLogFields.CORRELATION_ID))
             .build();
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
     }
@@ -248,7 +259,8 @@ public class GlobalExceptionHandler {
             .timestamp(LocalDateTime.now())
             .httpStatus(HttpStatus.BAD_REQUEST.value())
             .validationErrors(validationErrors)
-            .requestId(MDC.get("requestId"))
+            .requestId(MDC.get(StructuredLogFields.REQUEST_ID))
+            .correlationId(MDC.get(StructuredLogFields.CORRELATION_ID))
             .build();
             
         return ResponseEntity.badRequest().body(error);
@@ -280,7 +292,8 @@ public class GlobalExceptionHandler {
             .timestamp(LocalDateTime.now())
             .httpStatus(HttpStatus.BAD_REQUEST.value())
             .validationErrors(validationErrors)
-            .requestId(MDC.get("requestId"))
+            .requestId(MDC.get(StructuredLogFields.REQUEST_ID))
+            .correlationId(MDC.get(StructuredLogFields.CORRELATION_ID))
             .build();
 
         return ResponseEntity.badRequest().body(error);
@@ -299,7 +312,8 @@ public class GlobalExceptionHandler {
             .errorCode("INVALID_JSON")
             .timestamp(LocalDateTime.now())
             .httpStatus(HttpStatus.BAD_REQUEST.value())
-            .requestId(MDC.get("requestId"))
+            .requestId(MDC.get(StructuredLogFields.REQUEST_ID))
+            .correlationId(MDC.get(StructuredLogFields.CORRELATION_ID))
             .build();
 
         return ResponseEntity.badRequest().body(error);
@@ -318,7 +332,8 @@ public class GlobalExceptionHandler {
             .errorCode("ENDPOINT_NOT_FOUND")
             .timestamp(LocalDateTime.now())
             .httpStatus(HttpStatus.NOT_FOUND.value())
-            .requestId(MDC.get("requestId"))
+            .requestId(MDC.get(StructuredLogFields.REQUEST_ID))
+            .correlationId(MDC.get(StructuredLogFields.CORRELATION_ID))
             .build();
 
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
@@ -340,7 +355,8 @@ public class GlobalExceptionHandler {
             .errorCode("METHOD_NOT_ALLOWED")
             .timestamp(LocalDateTime.now())
             .httpStatus(HttpStatus.METHOD_NOT_ALLOWED.value())
-            .requestId(MDC.get("requestId"))
+            .requestId(MDC.get(StructuredLogFields.REQUEST_ID))
+            .correlationId(MDC.get(StructuredLogFields.CORRELATION_ID))
             .build();
 
         return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED).body(error);
@@ -362,7 +378,8 @@ public class GlobalExceptionHandler {
             .errorCode("INVALID_PARAMETER_TYPE")
             .timestamp(LocalDateTime.now())
             .httpStatus(HttpStatus.BAD_REQUEST.value())
-            .requestId(MDC.get("requestId"))
+            .requestId(MDC.get(StructuredLogFields.REQUEST_ID))
+            .correlationId(MDC.get(StructuredLogFields.CORRELATION_ID))
             .build();
 
         return ResponseEntity.badRequest().body(error);
@@ -381,7 +398,8 @@ public class GlobalExceptionHandler {
             .errorCode("ACCESS_DENIED")
             .timestamp(LocalDateTime.now())
             .httpStatus(HttpStatus.FORBIDDEN.value())
-            .requestId(MDC.get("requestId"))
+            .requestId(MDC.get(StructuredLogFields.REQUEST_ID))
+            .correlationId(MDC.get(StructuredLogFields.CORRELATION_ID))
             .build();
 
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(error);
@@ -400,14 +418,15 @@ public class GlobalExceptionHandler {
             ? e.getPersistentClassName().substring(e.getPersistentClassName().lastIndexOf('.') + 1)
             : "Unknown";
         log.warn("Optimistic lock conflict: entity={} requestId={} correlationId={} merchantId={}",
-            entityName, MDC.get("requestId"), MDC.get("correlationId"), MDC.get("merchantId"));
+            entityName, MDC.get(StructuredLogFields.REQUEST_ID), MDC.get(StructuredLogFields.CORRELATION_ID), MDC.get(StructuredLogFields.MERCHANT_ID));
 
         ErrorResponse error = ErrorResponse.builder()
             .message("Concurrent update conflict — another request modified this record simultaneously. Please re-read and retry.")
             .errorCode("OPTIMISTIC_LOCK_CONFLICT")
             .timestamp(LocalDateTime.now())
             .httpStatus(HttpStatus.CONFLICT.value())
-            .requestId(MDC.get("requestId"))
+            .requestId(MDC.get(StructuredLogFields.REQUEST_ID))
+            .correlationId(MDC.get(StructuredLogFields.CORRELATION_ID))
             .build();
 
         return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
@@ -421,14 +440,15 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleConcurrencyConflict(ConcurrencyConflictException e) {
         log.warn("Concurrency conflict [{}]: entityType={} entityId={} requestId={} correlationId={} merchantId={}",
             e.getReason(), e.getEntityType(), e.getEntityId(),
-            MDC.get("requestId"), MDC.get("correlationId"), MDC.get("merchantId"));
+            MDC.get(StructuredLogFields.REQUEST_ID), MDC.get(StructuredLogFields.CORRELATION_ID), MDC.get(StructuredLogFields.MERCHANT_ID));
 
         ErrorResponse error = ErrorResponse.builder()
             .message(e.getMessage())
             .errorCode(e.getErrorCode())
             .timestamp(LocalDateTime.now())
             .httpStatus(HttpStatus.CONFLICT.value())
-            .requestId(MDC.get("requestId"))
+            .requestId(MDC.get(StructuredLogFields.REQUEST_ID))
+            .correlationId(MDC.get(StructuredLogFields.CORRELATION_ID))
             .build();
 
         return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
@@ -446,7 +466,8 @@ public class GlobalExceptionHandler {
             .errorCode("DATA_CONFLICT")
             .timestamp(LocalDateTime.now())
             .httpStatus(HttpStatus.CONFLICT.value())
-            .requestId(MDC.get("requestId"))
+            .requestId(MDC.get(StructuredLogFields.REQUEST_ID))
+            .correlationId(MDC.get(StructuredLogFields.CORRELATION_ID))
             .build();
 
         return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
@@ -465,7 +486,8 @@ public class GlobalExceptionHandler {
             .errorCode(e.errorCode())
             .timestamp(LocalDateTime.now())
             .httpStatus(HttpStatus.TOO_MANY_REQUESTS.value())
-            .requestId(MDC.get("requestId"))
+            .requestId(MDC.get(StructuredLogFields.REQUEST_ID))
+            .correlationId(MDC.get(StructuredLogFields.CORRELATION_ID))
             .build();
 
         return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
@@ -489,10 +511,10 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleBaseDomainException(BaseDomainException e) {
         if (e.getHttpStatus().is5xxServerError()) {
             log.error("Platform domain error [{}]: {} metadata={} requestId={}",
-                e.getErrorCode(), e.getMessage(), e.getMetadata(), MDC.get("requestId"));
+                e.getErrorCode(), e.getMessage(), e.getMetadata(), MDC.get(StructuredLogFields.REQUEST_ID));
         } else {
             log.warn("Platform domain error [{}]: {} metadata={} requestId={}",
-                e.getErrorCode(), e.getMessage(), e.getMetadata(), MDC.get("requestId"));
+                e.getErrorCode(), e.getMessage(), e.getMetadata(), MDC.get(StructuredLogFields.REQUEST_ID));
         }
 
         ErrorResponse error = ErrorResponse.builder()
@@ -501,7 +523,8 @@ public class GlobalExceptionHandler {
             .timestamp(LocalDateTime.now())
             .httpStatus(e.getHttpStatus().value())
             .errorMetadata(e.getMetadata().isEmpty() ? null : e.getMetadata())
-            .requestId(MDC.get("requestId"))
+            .requestId(MDC.get(StructuredLogFields.REQUEST_ID))
+            .correlationId(MDC.get(StructuredLogFields.CORRELATION_ID))
             .build();
 
         return ResponseEntity.status(e.getHttpStatus()).body(error);
@@ -520,7 +543,8 @@ public class GlobalExceptionHandler {
             .errorCode("NOT_FOUND")
             .timestamp(LocalDateTime.now())
             .httpStatus(HttpStatus.NOT_FOUND.value())
-            .requestId(MDC.get("requestId"))
+            .requestId(MDC.get(StructuredLogFields.REQUEST_ID))
+            .correlationId(MDC.get(StructuredLogFields.CORRELATION_ID))
             .build();
 
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
@@ -539,7 +563,8 @@ public class GlobalExceptionHandler {
             .errorCode("RESPONSE_STATUS_ERROR")
             .timestamp(LocalDateTime.now())
             .httpStatus(e.getStatusCode().value())
-            .requestId(MDC.get("requestId"))
+            .requestId(MDC.get(StructuredLogFields.REQUEST_ID))
+            .correlationId(MDC.get(StructuredLogFields.CORRELATION_ID))
             .build();
 
         return ResponseEntity.status(e.getStatusCode()).body(error);
@@ -558,7 +583,8 @@ public class GlobalExceptionHandler {
             .errorCode("BAD_REQUEST")
             .timestamp(LocalDateTime.now())
             .httpStatus(HttpStatus.BAD_REQUEST.value())
-            .requestId(MDC.get("requestId"))
+            .requestId(MDC.get(StructuredLogFields.REQUEST_ID))
+            .correlationId(MDC.get(StructuredLogFields.CORRELATION_ID))
             .build();
 
         return ResponseEntity.badRequest().body(error);
@@ -577,7 +603,8 @@ public class GlobalExceptionHandler {
             .errorCode("INTERNAL_ERROR")
             .timestamp(LocalDateTime.now())
             .httpStatus(HttpStatus.INTERNAL_SERVER_ERROR.value())
-            .requestId(MDC.get("requestId"))
+            .requestId(MDC.get(StructuredLogFields.REQUEST_ID))
+            .correlationId(MDC.get(StructuredLogFields.CORRELATION_ID))
             .build();
             
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
@@ -596,7 +623,9 @@ public class GlobalExceptionHandler {
         private Map<String, String> validationErrors;
         /** Structured metadata from {@link BaseDomainException} subclasses (entity IDs, states, etc.). */
         private Map<String, Object> errorMetadata;
-        /** Correlation ID from X-Request-Id header (or auto-generated by RequestIdFilter). */
+        /** Request ID from X-Request-Id header (or auto-generated by RequestIdFilter). */
         private String requestId;
+        /** Correlation ID linking a business flow (X-Correlation-Id or falls back to requestId). */
+        private String correlationId;
     }
 }
