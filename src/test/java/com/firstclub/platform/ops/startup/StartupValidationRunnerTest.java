@@ -1,6 +1,7 @@
 package com.firstclub.platform.ops.startup;
 
 import com.firstclub.ledger.repository.LedgerAccountRepository;
+import com.firstclub.membership.security.JwtTokenProvider;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -23,6 +24,7 @@ class StartupValidationRunnerTest {
 
     private static final String DEV_WEBHOOK_SECRET = "dev-only-webhook-secret-change-in-prod";
     private static final String SAFE_WEBHOOK_SECRET = "super-secret-random-value-for-tests";
+    private static final String SAFE_JWT_SECRET = "c2FmZS10ZXN0LWp3dC1zZWNyZXQtbm90LXVzZWQtaW4tcHJvZA==";
 
     @Mock
     LedgerAccountRepository ledgerAccountRepository;
@@ -56,6 +58,22 @@ class StartupValidationRunnerTest {
             ReflectionTestUtils.setField(runner, "webhookSecret", SAFE_WEBHOOK_SECRET);
             assertThatNoException().isThrownBy(() -> runner.run(noArgs));
         }
+
+        @Test
+        @DisplayName("Dev JWT secret does not throw in dev profile")
+        void devJwtSecret_devProfile_doesNotThrow() {
+            ReflectionTestUtils.setField(runner, "webhookSecret", SAFE_WEBHOOK_SECRET);
+            ReflectionTestUtils.setField(runner, "jwtSecret", JwtTokenProvider.DEV_FALLBACK_SECRET);
+            assertThatNoException().isThrownBy(() -> runner.run(noArgs));
+        }
+
+        @Test
+        @DisplayName("Gateway emulator enabled does not throw in dev profile")
+        void gatewayEmulatorEnabled_devProfile_doesNotThrow() {
+            ReflectionTestUtils.setField(runner, "webhookSecret", SAFE_WEBHOOK_SECRET);
+            ReflectionTestUtils.setField(runner, "gatewayEmulatorEnabled", true);
+            assertThatNoException().isThrownBy(() -> runner.run(noArgs));
+        }
     }
 
     @Nested
@@ -79,14 +97,52 @@ class StartupValidationRunnerTest {
         @Test
         @DisplayName("Missing PII_ENC_KEY throws in prod when env var is absent")
         void missingPiiEncKey_prodProfile_throws() {
-            // PII_ENC_KEY is not set in CI — confirm fail-fast fires in prod profile
+            // PII_ENC_KEY is not set in CI — confirm fail-fast fires in prod profile.
+            // JWT and gateway emulator checks run before PII; set them safe so PII check is reached.
             ReflectionTestUtils.setField(runner, "webhookSecret", SAFE_WEBHOOK_SECRET);
+            ReflectionTestUtils.setField(runner, "jwtSecret", SAFE_JWT_SECRET);
             // Only assert if PII_ENC_KEY is actually unset (guards against accidental env var in CI)
             if (System.getenv("PII_ENC_KEY") == null || System.getenv("PII_ENC_KEY").isBlank()) {
                 assertThatThrownBy(() -> runner.run(noArgs))
                         .isInstanceOf(IllegalStateException.class)
                         .hasMessageContaining("PII_ENC_KEY");
             }
+        }
+
+        @Test
+        @DisplayName("Dev JWT secret throws in prod")
+        void devJwtSecret_prodProfile_throws() {
+            ReflectionTestUtils.setField(runner, "webhookSecret", SAFE_WEBHOOK_SECRET);
+            ReflectionTestUtils.setField(runner, "jwtSecret", JwtTokenProvider.DEV_FALLBACK_SECRET);
+            // JWT check runs after webhook; it fires before PII/gateway checks
+            assertThatThrownBy(() -> runner.run(noArgs))
+                    .isInstanceOf(IllegalStateException.class)
+                    .hasMessageContaining("app.jwt.secret");
+        }
+
+        @Test
+        @DisplayName("Safe JWT secret does not throw in prod (other secrets valid)")
+        void safeJwtSecret_prodProfile_withAllSecretsValid_doesNotThrow() {
+            // Skip if PII_ENC_KEY is absent (that check would fire after gateway emulator)
+            if (System.getenv("PII_ENC_KEY") == null || System.getenv("PII_ENC_KEY").isBlank()) {
+                return;
+            }
+            ReflectionTestUtils.setField(runner, "webhookSecret", SAFE_WEBHOOK_SECRET);
+            ReflectionTestUtils.setField(runner, "jwtSecret", SAFE_JWT_SECRET);
+            when(ledgerAccountRepository.count()).thenReturn(1L);
+            assertThatNoException().isThrownBy(() -> runner.run(noArgs));
+        }
+
+        @Test
+        @DisplayName("Gateway emulator enabled throws in prod")
+        void gatewayEmulatorEnabled_prodProfile_throws() {
+            ReflectionTestUtils.setField(runner, "webhookSecret", SAFE_WEBHOOK_SECRET);
+            ReflectionTestUtils.setField(runner, "jwtSecret", SAFE_JWT_SECRET);
+            ReflectionTestUtils.setField(runner, "gatewayEmulatorEnabled", true);
+            // Gateway check runs before PII check, so message is deterministic
+            assertThatThrownBy(() -> runner.run(noArgs))
+                    .isInstanceOf(IllegalStateException.class)
+                    .hasMessageContaining("gateway-emulator");
         }
     }
 
@@ -104,6 +160,22 @@ class StartupValidationRunnerTest {
         @DisplayName("Default webhook secret does not throw in test profile")
         void defaultWebhookSecret_testProfile_doesNotThrow() {
             ReflectionTestUtils.setField(runner, "webhookSecret", DEV_WEBHOOK_SECRET);
+            assertThatNoException().isThrownBy(() -> runner.run(noArgs));
+        }
+
+        @Test
+        @DisplayName("Dev JWT secret does not throw in test profile")
+        void devJwtSecret_testProfile_doesNotThrow() {
+            ReflectionTestUtils.setField(runner, "webhookSecret", SAFE_WEBHOOK_SECRET);
+            ReflectionTestUtils.setField(runner, "jwtSecret", JwtTokenProvider.DEV_FALLBACK_SECRET);
+            assertThatNoException().isThrownBy(() -> runner.run(noArgs));
+        }
+
+        @Test
+        @DisplayName("Gateway emulator enabled does not throw in test profile")
+        void gatewayEmulatorEnabled_testProfile_doesNotThrow() {
+            ReflectionTestUtils.setField(runner, "webhookSecret", SAFE_WEBHOOK_SECRET);
+            ReflectionTestUtils.setField(runner, "gatewayEmulatorEnabled", true);
             assertThatNoException().isThrownBy(() -> runner.run(noArgs));
         }
     }

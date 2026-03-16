@@ -31,8 +31,11 @@ import java.util.stream.Collectors;
 @Slf4j
 public class JwtTokenProvider {
 
-    /** Known dev-only fallback secret — used ONLY when JWT_SECRET env var is absent. */
-    static final String DEV_FALLBACK_SECRET =
+    /** Known dev-only fallback secret — used ONLY when JWT_SECRET env var is absent.
+     *  Public so that {@code StartupValidationRunner} can detect and reject this value
+     *  in non-dev/non-test profiles.
+     */
+    public static final String DEV_FALLBACK_SECRET =
         "Y2hhbmdlbWVpbnByb2R1Y3Rpb24tdGhpcy1pcy1hLWRldi1vbmx5LXNlY3JldC1rZXkh";
 
     @Value("${app.jwt.secret}")
