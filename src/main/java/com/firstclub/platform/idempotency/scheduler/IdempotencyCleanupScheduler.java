@@ -1,6 +1,8 @@
 package com.firstclub.platform.idempotency.scheduler;
 
 import com.firstclub.platform.idempotency.service.IdempotencyRecordService;
+import com.firstclub.platform.scheduler.PrimaryOnlySchedulerGuard;
+import com.firstclub.platform.scheduler.lock.SchedulerLockService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -29,7 +31,11 @@ import java.time.Duration;
 @Slf4j
 public class IdempotencyCleanupScheduler {
 
+    private static final String SCHEDULER_NAME = "idempotency-stuck-cleanup";
+
     private final IdempotencyRecordService recordService;
+    private final SchedulerLockService schedulerLockService;
+    private final PrimaryOnlySchedulerGuard primaryOnlySchedulerGuard;
 
     @Value("${app.idempotency.stuck-processing-threshold-minutes:5}")
     private int stuckThresholdMinutes;
@@ -47,6 +53,13 @@ public class IdempotencyCleanupScheduler {
     @Scheduled(fixedDelayString = "${app.idempotency.stuck-cleanup-interval-ms:60000}")
     @Transactional
     public int resetStuckProcessing() {
+        if (!primaryOnlySchedulerGuard.canRunScheduler(SCHEDULER_NAME)) {
+            return 0;
+        }
+        if (!schedulerLockService.tryAcquireForBatch(SCHEDULER_NAME)) {
+            log.debug("[{}] advisory lock not acquired — another node is running this batch", SCHEDULER_NAME);
+            return 0;
+        }
         Duration threshold = Duration.ofMinutes(stuckThresholdMinutes);
         return recordService.resetStuckProcessing(threshold);
     }

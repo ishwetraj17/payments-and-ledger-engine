@@ -1,11 +1,14 @@
 package com.firstclub.reporting.projections.scheduler;
 
+import com.firstclub.platform.scheduler.PrimaryOnlySchedulerGuard;
+import com.firstclub.platform.scheduler.lock.SchedulerLockService;
 import com.firstclub.reporting.projections.service.LedgerSnapshotService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 
@@ -31,7 +34,11 @@ import java.time.LocalDate;
 @Slf4j
 public class DailySnapshotScheduler {
 
+    private static final String SCHEDULER_NAME = "daily-ledger-snapshot";
+
     private final LedgerSnapshotService ledgerSnapshotService;
+    private final SchedulerLockService schedulerLockService;
+    private final PrimaryOnlySchedulerGuard primaryOnlySchedulerGuard;
 
     /**
      * Run the daily ledger snapshot.
@@ -40,7 +47,15 @@ public class DailySnapshotScheduler {
      * Override via {@code projections.snapshot.scheduler.cron}.
      */
     @Scheduled(cron = "${projections.snapshot.scheduler.cron:0 0 1 * * *}")
+    @Transactional
     public void runDailySnapshot() {
+        if (!primaryOnlySchedulerGuard.canRunScheduler(SCHEDULER_NAME)) {
+            return;
+        }
+        if (!schedulerLockService.tryAcquireForBatch(SCHEDULER_NAME)) {
+            log.debug("[{}] advisory lock not acquired — another node is running this batch", SCHEDULER_NAME);
+            return;
+        }
         LocalDate today = LocalDate.now();
         log.info("DailySnapshotScheduler: starting ledger balance snapshot for {}", today);
         try {

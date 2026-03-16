@@ -1,5 +1,7 @@
 package com.firstclub.risk.scheduler;
 
+import com.firstclub.platform.scheduler.PrimaryOnlySchedulerGuard;
+import com.firstclub.platform.scheduler.lock.SchedulerLockService;
 import com.firstclub.risk.repository.RiskEventRepository;
 import com.firstclub.risk.review.ManualReviewEscalationService;
 import com.firstclub.risk.scoring.RiskScoreDecayService;
@@ -8,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -24,9 +27,14 @@ import java.util.List;
 @RequiredArgsConstructor
 public class RiskMaintenanceScheduler {
 
+    private static final String SCHEDULER_NAME_ESCALATION = "risk-escalation";
+    private static final String SCHEDULER_NAME_DECAY      = "risk-score-decay";
+
     private final ManualReviewEscalationService escalationService;
     private final RiskScoreDecayService         decayService;
     private final RiskEventRepository           riskEventRepository;
+    private final SchedulerLockService          schedulerLockService;
+    private final PrimaryOnlySchedulerGuard     primaryOnlySchedulerGuard;
 
     /**
      * Auto-escalates any manual-review cases whose {@code slaDueAt} has passed and
@@ -34,7 +42,15 @@ public class RiskMaintenanceScheduler {
      * caught within half an hour of expiry.
      */
     @Scheduled(fixedRate = 1_800_000)
+    @Transactional
     public void escalateOverdueReviewCases() {
+        if (!primaryOnlySchedulerGuard.canRunScheduler(SCHEDULER_NAME_ESCALATION)) {
+            return;
+        }
+        if (!schedulerLockService.tryAcquireForBatch(SCHEDULER_NAME_ESCALATION)) {
+            log.debug("[{}] advisory lock not acquired — another node is running this batch", SCHEDULER_NAME_ESCALATION);
+            return;
+        }
         int escalated = escalationService.escalateOverdueCases();
         if (escalated > 0) {
             log.info("[RiskMaintenance] Escalated {} SLA-overdue manual-review case(s)", escalated);
@@ -47,7 +63,15 @@ public class RiskMaintenanceScheduler {
      * age of each event without requiring on-the-fly recalculation on every read.
      */
     @Scheduled(cron = "0 0 2 * * *")
+    @Transactional
     public void refreshDecayedScores() {
+        if (!primaryOnlySchedulerGuard.canRunScheduler(SCHEDULER_NAME_DECAY)) {
+            return;
+        }
+        if (!schedulerLockService.tryAcquireForBatch(SCHEDULER_NAME_DECAY)) {
+            log.debug("[{}] advisory lock not acquired — another node is running this batch", SCHEDULER_NAME_DECAY);
+            return;
+        }
         List<RiskEvent> events = riskEventRepository.findByBaseScoreIsNotNull();
         if (events.isEmpty()) {
             return;
