@@ -36,6 +36,12 @@ public class StartupValidationRunner implements ApplicationRunner {
     @Value("${spring.profiles.active:dev}")
     private String activeProfile;
 
+    @Value("${spring.application.name:membership}")
+    private String applicationName;
+
+    @Value("${app.version:unknown}")
+    private String appVersion;
+
     @Value("${payments.webhook.secret:}")
     private String webhookSecret;
 
@@ -49,6 +55,7 @@ public class StartupValidationRunner implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) {
+        log.info("[STARTUP] app={} version={} profile={}", applicationName, appVersion, activeProfile);
         boolean isNonDevProfile = !activeProfile.contains("dev") && !activeProfile.contains("test");
         validateWebhookSecret(isNonDevProfile);
         validateJwtSecret(isNonDevProfile);
