@@ -1,14 +1,13 @@
 # Payments & Ledger Engine
 
-A production-grade fintech billing and payments engine — built to demonstrate how financial correctness is actually engineered at scale. Covers the full financial lifecycle from subscription enrollment through invoice generation, payment orchestration, double-entry ledger posting, revenue recognition, and reconciliation.
+A production-grade fintech billing and payments engine, built to demonstrate how financial correctness is actually engineered at scale. Covers the full financial lifecycle from subscription enrollment through invoice generation, payment orchestration, double-entry ledger posting, revenue recognition, and reconciliation.
 
-The system manages the full financial lifecycle — from a customer enrolling in a plan through invoice
+The system manages the full financial lifecycle from a customer enrolling in a plan through invoice
 generation, payment orchestration, ledger posting, revenue recognition, and
-reconciliation — with an explicit focus on financial correctness, concurrency
+reconciliation with an explicit focus on financial correctness, concurrency
 safety, and operational explainability.
 
-Built by **Shwet Raj** as a personal engineering depth project, documented and
-hardened across 24 iterative phases.
+Built by **Shwet Raj** as a long-running engineering depth project — 24 iterative phases, 69 Flyway migrations, 80+ architecture documents, 2000+ tests.
 
 ---
 
