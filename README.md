@@ -1,4 +1,4 @@
-# FirstClub Membership Platform
+# Payments & Ledger Engine
 
 A modular-monolith billing, subscriptions, and payments platform built to
 demonstrate production-grade backend engineering. The system manages the full
