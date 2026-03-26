@@ -12,3 +12,23 @@ Thanks for your interest in contributing.
 - Add tests for any new behaviour
 - Follow the existing code style and package structure
 - Reference the relevant architecture doc in your PR description
+
+## Running Tests
+```bash
+# Unit tests
+./mvnw test
+
+# Integration tests (requires Docker)
+./mvnw test -Dtest="*IT"
+
+# Concurrency tests
+./mvnw test -Dtest="*ConcurrencyIT"
+```
+
+## Questions
+Open a GitHub Discussion or raise an Issue — happy to help.
+```
+
+- Scroll down → **Commit changes** → **Commit changes**
+
+---
