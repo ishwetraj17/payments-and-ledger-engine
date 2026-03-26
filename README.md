@@ -367,16 +367,19 @@ If you are a senior engineer or interviewer and want a fast signal read:
 
 | Step | Where to look | What you will see |
 |---|---|---|
-| 1 | [`docs/architecture/00-engineering-principles.md`](docs/architecture/00-engineering-principles.md) | The 10 principles that govern every design decision |
-| 2 | [`docs/architecture/02-bounded-contexts.md`](docs/architecture/02-bounded-contexts.md) | How modules are divided and what crosses their boundaries |
-| 3 | [`docs/architecture/06-concurrency-model.md`](docs/architecture/06-concurrency-model.md) | Per-domain locking strategy with explicit accepted races |
-| 4 | [`docs/accounting/01-ledger-model.md`](docs/accounting/01-ledger-model.md) | Double-entry design, Chart of Accounts, balance invariant |
-| 5 | [`docs/api/01-idempotency-model.md`](docs/api/01-idempotency-model.md) | 3-layer model with failure modes per layer |
-| 6 | [`docs/architecture/10-outbox-pattern.md`](docs/architecture/10-outbox-pattern.md) | Lease + heartbeat, stale lease recovery, per-aggregate ordering |
+| 1 | [`docs/accounting/01-ledger-model.md`](docs/accounting/01-ledger-model.md) | Double-entry design, Chart of Accounts, balance invariant — start here |
+| 2 | [`docs/architecture/06-concurrency-model.md`](docs/architecture/06-concurrency-model.md) | Per-domain locking strategy with explicit accepted races and failure modes |
+| 3 | [`docs/api/01-idempotency-model.md`](docs/api/01-idempotency-model.md) | 3-layer idempotency model with failure modes per layer |
+| 4 | [`docs/architecture/10-outbox-pattern.md`](docs/architecture/10-outbox-pattern.md) | Lease + heartbeat, stale lease recovery, per-aggregate ordering |
+| 5 | [`docs/architecture/00-engineering-principles.md`](docs/architecture/00-engineering-principles.md) | The 10 principles that govern every design decision |
+| 6 | [`docs/architecture/02-bounded-contexts.md`](docs/architecture/02-bounded-contexts.md) | How modules are divided and what crosses their boundaries |
 | 7 | [`docs/architecture/08-scaling-path.md`](docs/architecture/08-scaling-path.md) | Honest bottleneck analysis and incremental evolution steps |
 | 8 | [`docs/operations/01-reconciliation-playbook.md`](docs/operations/01-reconciliation-playbook.md) | Operational reality of running a financial system |
 | 9 | [`src/test/java/com/firstclub/concurrency/`](src/test/java/com/firstclub/concurrency/) | Executable proof of locking invariants under load |
-| 10 | [`src/main/resources/db/migration/`](src/main/resources/db/migration/) | 69 versioned migrations tracing system evolution |
+| 10 | [`src/main/resources/db/migration/`](src/main/resources/db/migration/) | 69 versioned migrations tracing the full system evolution |
+
+> **The two most impressive files in this repo are rows 1 and 2.** 
+> If you only have 2 minutes, read those.
 
 ---
 
