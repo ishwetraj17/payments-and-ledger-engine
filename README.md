@@ -1,8 +1,8 @@
 # Payments & Ledger Engine
 
-A modular-monolith billing, subscriptions, and payments platform built to
-demonstrate production-grade backend engineering. The system manages the full
-financial lifecycle — from a customer enrolling in a plan through invoice
+A production-grade fintech billing and payments engine — built to demonstrate how financial correctness is actually engineered at scale. Covers the full financial lifecycle from subscription enrollment through invoice generation, payment orchestration, double-entry ledger posting, revenue recognition, and reconciliation.
+
+The system manages the full financial lifecycle — from a customer enrolling in a plan through invoice
 generation, payment orchestration, ledger posting, revenue recognition, and
 reconciliation — with an explicit focus on financial correctness, concurrency
 safety, and operational explainability.
